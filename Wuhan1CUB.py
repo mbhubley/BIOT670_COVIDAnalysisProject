@@ -24,8 +24,8 @@
 
 # define a function for creating an codon usage table, codon_use_table()
 
+    
 # define a fuction for plotting usage frequencies over the genome, codon_freq_plot()
-
 
 
 
