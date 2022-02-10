@@ -27,10 +27,10 @@ def gb_to_cds(gb_record):
         start = feature.location.start.position
         end = feature.location.end.position
         if feature.type == "5'UTR":        
-            cds_dict["5'UTR"] = [start, end]
-        elif feature.type == "CDS":
-            locus_tag = feature.qualifiers['protein_id'][0]
-            cds_dict[locus_tag] = [start, end]
+            name = feature.qualifiers['gene'][0]
+            cds_dict[name] = [start, end]
+        elif feature.type == "3'UTR":
+            cds_dict["3'UTR"] = [start, end]
             
     return(cds_dict)
 
