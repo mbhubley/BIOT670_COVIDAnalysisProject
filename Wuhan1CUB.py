@@ -8,7 +8,55 @@
 # 4.	Compare to known non-human-pathogenic strain 
 # ---------------------------------------------------
 
+# Please refer for calculations:
+# Sharp, P. M., & Li, W.-H. (1987). Nucleic Acids Research, 15(3), 1281–1295. 
+# https://doi.org/10.1093/nar/15.3.1281
+
 from Bio import SeqIO
+from math import exp, log
+
+# define aamino acid codon table
+gencode = {
+'ATA':'I', 'ATC':'I', 'ATT':'I', 'ATG':'M',
+'ACA':'T', 'ACC':'T', 'ACG':'T', 'ACT':'T',
+'AAC':'N', 'AAT':'N', 'AAA':'K', 'AAG':'K',
+'AGC':'S', 'AGT':'S', 'AGA':'R', 'AGG':'R',
+'CTA':'L', 'CTC':'L', 'CTG':'L', 'CTT':'L',
+'CCA':'P', 'CCC':'P', 'CCG':'P', 'CCT':'P',
+'CAC':'H', 'CAT':'H', 'CAA':'Q', 'CAG':'Q',
+'CGA':'R', 'CGC':'R', 'CGG':'R', 'CGT':'R',
+'GTA':'V', 'GTC':'V', 'GTG':'V', 'GTT':'V',
+'GCA':'A', 'GCC':'A', 'GCG':'A', 'GCT':'A',
+'GAC':'D', 'GAT':'D', 'GAA':'E', 'GAG':'E',
+'GGA':'G', 'GGC':'G', 'GGG':'G', 'GGT':'G',
+'TCA':'S', 'TCC':'S', 'TCG':'S', 'TCT':'S',
+'TTC':'F', 'TTT':'F', 'TTA':'L', 'TTG':'L',
+'TAC':'Y', 'TAT':'Y', 'TAA':'_', 'TAG':'_',
+'TGC':'C', 'TGT':'C', 'TGA':'_', 'TGG':'W'}
+
+# define synonymous_codons
+synonymous_codons = {
+"C": ["TGT", "TGC"],
+"D": ["GAT", "GAC"],
+"S": ["TCT", "TCG", "TCA", "TCC", "AGC", "AGT"],
+"Q": ["CAA", "CAG"],
+"M": ["ATG"],
+"N": ["AAC", "AAT"],
+"P": ["CCT", "CCG", "CCA", "CCC"],
+"K": ["AAG", "AAA"],
+"_": ["TAG", "TGA", "TAA"],
+"T": ["ACC", "ACA", "ACG", "ACT"],
+"F": ["TTT", "TTC"],
+"A": ["GCA", "GCC", "GCG", "GCT"],
+"G": ["GGT", "GGG", "GGA", "GGC"],
+"I": ["ATC", "ATA", "ATT"],
+"L": ["TTA", "TTG", "CTC", "CTT", "CTG", "CTA"],
+"H": ["CAT", "CAC"],
+"R": ["CGA", "CGC", "CGG", "CGT", "AGG", "AGA"],
+"W": ["TGG"],
+"V": ["GTA", "GTC", "GTG", "GTT"],
+"E": ["GAG", "GAA"],
+"Y": ["TAT", "TAC"]}
 
 # This function gets a genbank file and returns biopython genbank record
 def gb_parser(file):
@@ -60,30 +108,7 @@ def codon_freq(cds_seqs):
     return codon_dict
 
 # This function calculates RSCU from codon frequencies        
-def get_RSCU(codon_freq):
-    synonymous_codons = {
-    "C": ["TGT", "TGC"],
-    "D": ["GAT", "GAC"],
-    "S": ["TCT", "TCG", "TCA", "TCC", "AGC", "AGT"],
-    "Q": ["CAA", "CAG"],
-    "M": ["ATG"],
-    "N": ["AAC", "AAT"],
-    "P": ["CCT", "CCG", "CCA", "CCC"],
-    "K": ["AAG", "AAA"],
-    "*": ["TAG", "TGA", "TAA"],
-    "T": ["ACC", "ACA", "ACG", "ACT"],
-    "F": ["TTT", "TTC"],
-    "A": ["GCA", "GCC", "GCG", "GCT"],
-    "Z": ["GGT", "GGG", "GGA", "GGC"],
-    "I": ["ATC", "ATA", "ATT"],
-    "L": ["TTA", "TTG", "CTC", "CTT", "CTG", "CTA"],
-    "H": ["CAT", "CAC"],
-    "R": ["CGA", "CGC", "CGG", "CGT", "AGG", "AGA"],
-    "W": ["TGG"],
-    "V": ["GTA", "GTC", "GTG", "GTT"],
-    "E": ["GAG", "GAA"],
-    "Y": ["TAT", "TAC"]}
-    
+def get_RSCU(codon_freq): 
     rscu = {}
     for val in synonymous_codons.values():
         # calculate expected frequence (assume equal usage)
@@ -98,33 +123,66 @@ def get_RSCU(codon_freq):
     
     return rscu
 
-# This function creates CAI from RSCU
-def get_CAI(rscu):
-    cai={}
-    max_rscu = max(rscu.values())
-    for key, val in rscu.items():        
-        cai[key] = val/max_rscu
+# This function calculates relative adaptiveness(W) of codons
+def get_w(rscu):
+    w={}
+    for key, val in rscu.items():
+        aa = gencode[key]
+        rscu_list=[]
+        for codon in synonymous_codons[aa]:
+            rscu_list.append(rscu[codon])
+        w[key] = val/max(rscu_list)
         
-    return cai
+    return w
+
+# This function camculates CAI (geometric mean of the RSCU values)
+def calc_cai(sequence, w):
+    L = len(sequence)/3 # number of codon
+    cai = 0
+    for i in range(0,len(sequence),3):
+        cai += log(w[sequence[i:i+3]])
+
+    return round(exp((1/L)*cai),3)
+    
+
+# This function writes dictionary items into a file
+def file_writer(any_dict, name):
+    with open(name + ".csv","w") as f:
+        for key, val in any_dict.items():
+            f.write(key + "," + str(round(val,3)) + "\n")
+    print(name + ".csv is written!")
     
 # define a fuction for plotting usage frequencies over the genome, codon_freq_plot()
 
 # get wuhan-1 strain genome sequence (from file or fetch from NCBI)
-w1_file = "wuhan-hu-1_sequence.gb"
+# file_name = "wuhan-hu-1_sequence.gb"
+file_name = input("Please enter your GB filename: ")
 
 # parse genbank file
-w1_record = gb_parser(w1_file)
-w1_seq = gb_to_seq(w1_record)
-w1_cds = gb_to_cds(w1_record)
+sample_gb_record = gb_parser(file_name)
+sample_seq = gb_to_seq(sample_gb_record)
+sample_cds = gb_to_cds(sample_gb_record)
 
 # -- test --       
-w1_codon_freq = codon_freq(w1_cds)
-w1_rscu = get_RSCU(w1_codon_freq)
-w1_cai = get_CAI(w1_rscu)
+freq = codon_freq(sample_cds)
+rscu = get_RSCU(freq)
+w = get_w(rscu)
 
 # -- print --
-for key,val in w1_cai.items():
-    print(key, round(val,2))
+#print(rscu)
+#print(w)
+
+# write frequency table
+file_writer(freq, file_name + "_freq" )
+# write rscu table  
+file_writer(rscu, file_name + "_rscu")
+
+# example cai calculation
+# seq = "AAATTT"
+seq = str(sample_cds[0])
+
+cai = calc_cai(seq,w)
+print("CAI: " + str(cai))
 
 # define a fuction for plotting usage frequencies over the genome, codon_freq_plot()
 
