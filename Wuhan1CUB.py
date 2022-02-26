@@ -316,7 +316,7 @@ def main():
     start = 1
     stop = frag_number
     for frag in rscu_fragments:
-        file_writer(gene, path + "\\" + file_name + "_rscu_fragments_" + str(start) + "-" + str(stop))
+        file_writer(frag, path + "\\" + file_name + "_rscu_fragments_" + str(start) + "-" + str(stop))
         start += frag_number
         stop = start + frag_number - 1
     
