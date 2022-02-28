@@ -284,8 +284,8 @@ def file_writer2(sample_frags, name):
         freq_list.append(val)
     
     df = pd.DataFrame(freq_list, index=key_list)
-    df.to_csv(name + ".tsv", sep="\t")
-    print (name + ".tsv is written!")
+    df.to_csv(name + ".csv", sep=",")
+    print (name + ".csv is written!")
 
 
 def main():
@@ -329,8 +329,8 @@ def main():
         count = codon_count(sample_fragments[i])
         freq = codon_aafreq(count)
         rscu = get_RSCU(freq)
-        freq_frags[str(pos)+":"+str(pos+frag_number-1)] = freq
-        rscu_frags[str(pos)+":"+str(pos+frag_number-1)] = rscu
+        freq_frags[str(pos)+"-"+str(pos+frag_number-1)] = freq
+        rscu_frags[str(pos)+"-"+str(pos+frag_number-1)] = rscu
         pos += frag_number
 
     # ask to convert codons to numbers
@@ -348,10 +348,10 @@ def main():
     file_writer(rscu_genome, file_name + "_rscu_genome")
 
     # write gene rscu tables and save in genes folder
-    file_writer2(rscu_genes, file_name + "rscu_genes")
+    file_writer2(rscu_genes, file_name + "_rscu_genes")
 
     # write fragment rscu tables and save in fragment folder
-    file_writer2(rscu_frags, file_name + "rscu_frags")
+    file_writer2(rscu_frags, file_name + "_rscu_frags")
     
 
     # comparison with other strains
