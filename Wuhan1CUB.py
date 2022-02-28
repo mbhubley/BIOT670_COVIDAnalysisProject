@@ -12,10 +12,10 @@
 # Sharp, P. M., & Li, W.-H. (1987). Nucleic Acids Research, 15(3), 1281–1295. 
 # https://doi.org/10.1093/nar/15.3.1281
 
-import os
 from Bio import SeqIO
 from Bio.Seq import Seq
 from math import exp, log
+import pandas as pd
 
 # define aamino acid codon table
 gencode = {
@@ -66,9 +66,35 @@ def gb_parser(file):
     return gb_record
 
 
-# This fucntion accepts a genbank record and returns a raw sequence
-def gb_to_seq(gb_record):
-    return gb_record.seq
+# This function determines if a location is inside a set of gene locations
+def in_locs(gene_locs, test):
+    found = False
+    for i in gene_locs:
+        if test in i:
+            found = True
+    return found
+
+
+# This function creates a list of lists containing all CDS with name, coordinates, and sequence
+def genes(gb_record):
+    names = []
+    locs = []
+    seqs = []
+    for feature in gb_record.features:
+        if feature.type == "CDS":
+            try:
+                name = feature.qualifiers.get("gene")[0]
+            except TypeError:
+                name = feature.qualifiers.get("product")[0]
+            if name in names:
+                continue
+            if in_locs(locs, feature.location.start) == True and in_locs(locs, feature.location.end) == True:
+                    continue
+            names.append(name)
+            locs.append(feature.location)
+            seqs.append(feature.location.extract(gb_record).seq)
+    genes_all = [names, locs, seqs]
+    return genes_all
 
 
 # This function accepts a genbank record and returns a list containing the CDS sequences
@@ -81,7 +107,7 @@ def gb_to_cds(gb_record):
     return(cds_seqs)
 
 
-# This function accepts a CDS list and returns the sequence as a list of codons
+# This function accepts a list of CDS data and returns the sequence as a list of codons
 def cds_codons(cds_list):
     cds_codons = []
     for cds in cds_list:
@@ -246,7 +272,20 @@ def file_writer(any_dict, name):
     print(name + ".csv is written!")
     
     
-# define a fuction for plotting usage frequencies over the genome, codon_freq_plot()
+# file witer for multiple fragment frequency dictionary
+def file_writer2(sample_frags, name):
+    key_list=[]
+    freq_list=[]
+    for key, val in sample_frags.items():
+        #pos = key.rsplit("-") # alternate 2
+        #gene = detect_location(int(pos[0]), int(pos[1]), sample_genes) # alternate 2
+        #key_list.append(gene + " " + key) #alternate 2
+        key_list.append(key) #alternate 1
+        freq_list.append(val)
+    
+    df = pd.DataFrame(freq_list, index=key_list)
+    df.to_csv(name + ".tsv", sep="\t")
+    print (name + ".tsv is written!")
 
 
 def main():
@@ -255,45 +294,53 @@ def main():
 
     # parse genbank file
     sample_gb_record = gb_parser(file_name)
-    sample_seq = gb_to_seq(sample_gb_record)
     sample_cds = gb_to_cds(sample_gb_record)
-    sample_codons = cds_codons(sample_cds)
+    sample_genes = genes(sample_gb_record)
+    sample_codons = cds_codons(sample_genes[2])
+
 
     # analyze whole genome      
-    counts_genome = codon_count(Seq("").join(sample_cds))
+    counts_genome = codon_count(Seq("").join(sample_genes[2]))
     freq_genome = codon_aafreq(counts_genome)
     rscu_genome = get_RSCU(freq_genome)
 
     # analyze by gene
-    freq_genes = []
-    rscu_genes = []
-    for i in range(0,len(sample_cds)):
-        counts_genes = codon_count(sample_cds[i])
-        freq_genes.append(codon_aafreq(counts_genes))
-        rscu_genes.append(get_RSCU(freq_genes[i]))
+    freq_genes = {}
+    rscu_genes = {}
+    for i in range(0,len(sample_genes[0])):
+        name = sample_genes[0][i]
+        count = codon_count(sample_genes[2][i])
+        freq = codon_aafreq(count)
+        rscu = get_RSCU(freq)
+        freq_genes[name] = freq
+        rscu_genes[name] = rscu
     
     # analyze by fragments of any number of codons
-    # get number of codons per fragment to divide genome into
-    frag_number = int(input("Please enter the number of codons per fragment to divide genome into: "))
+    # get number of codons per fragment to divide the genome into from user input
+    frag_number = int(input("To divide genome into regions of arbitrary size, enter the desired number of codons per region: "))
 
     # divide genome into fragments
     sample_fragments = cds_divide(sample_codons, frag_number)
 
-    freq_fragments = []
-    rscu_fragments = []
+    freq_frags = {}
+    rscu_frags = {}
+    pos = 1
     for i in range(0,len(sample_fragments)):
-        counts_frag = codon_count(sample_fragments[i])
-        freq_fragments.append(codon_aafreq(counts_frag))
-        rscu_fragments.append(get_RSCU(freq_fragments[i]))
+        count = codon_count(sample_fragments[i])
+        freq = codon_aafreq(count)
+        rscu = get_RSCU(freq)
+        freq_frags[str(pos)+":"+str(pos+frag_number-1)] = freq
+        rscu_frags[str(pos)+":"+str(pos+frag_number-1)] = rscu
+        pos += frag_number
 
     # ask to convert codons to numbers
-    convert = input("Convert codons to numeric values? Enter Y/N: ")
-    if convert.lower() == "y":
-        rscu_genome = codon_to_num(rscu_genome)
-        for i in range(0,len(rscu_genes)):
-            rscu_genes[i] = codon_to_num(rscu_genes[i])
-        for i in range(0,len(rscu_genes)):
-            rscu_fragments[i] = codon_to_num(rscu_fragments[i])
+    #convert = input("Convert codons to numeric values? Enter Y/N: ")
+    #if convert.lower() == "y":
+        #rscu_genome = codon_to_num(rscu_genome)
+        #for i in range(0,len(rscu_genes)):
+            #rscu_genes[i] = codon_to_num(rscu_genes[i])
+        #for i in range(0,len(rscu_genes)):
+            #rscu_fragments[i] = codon_to_num(rscu_fragments[i])
 
     # write genome frequency table
     # file_writer(freq_genome, file_name + "_freq_genome" )
@@ -301,30 +348,11 @@ def main():
     file_writer(rscu_genome, file_name + "_rscu_genome")
 
     # write gene rscu tables and save in genes folder
-    path = os.getcwd() + "\\" + file_name + "_rscu_genes"
-    if not os.path.exists(path):
-        os.mkdir(path)
-    i = 1
-    for gene in rscu_genes:
-        file_writer(gene, path + "\\" + file_name + "_rscu_gene_" + str(i))
-        i += 1
+    file_writer2(rscu_genes, file_name + "rscu_genes")
 
     # write fragment rscu tables and save in fragment folder
-    path = os.getcwd() + "\\" + file_name + "_rscu_fragments"
-    if not os.path.exists(path):
-        os.mkdir(path)
-    start = 1
-    stop = frag_number
-    for frag in rscu_fragments:
-        file_writer(frag, path + "\\" + file_name + "_rscu_fragments_" + str(start) + "-" + str(stop))
-        start += frag_number
-        stop = start + frag_number - 1
+    file_writer2(rscu_frags, file_name + "rscu_frags")
     
-    # define a fuction for plotting usage frequencies over the genome, codon_freq_plot()
-
-    # plot codon usage
-
-    # find non-highest-frequency codons
 
     # comparison with other strains
 if __name__ == "__main__":
