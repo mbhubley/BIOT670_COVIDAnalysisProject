@@ -317,30 +317,30 @@ def main():
     
     # analyze by fragments of any number of codons
     # get number of codons per fragment to divide the genome into from user input
-    frag_number = int(input("To divide genome into regions of arbitrary size, enter the desired number of codons per region: "))
+    #frag_number = int(input("To divide genome into regions of arbitrary size, enter the desired number of codons per region: "))
 
     # divide genome into fragments
-    sample_fragments = cds_divide(sample_codons, frag_number)
+    #sample_fragments = cds_divide(sample_codons, frag_number)
 
-    freq_frags = {}
-    rscu_frags = {}
-    pos = 1
-    for i in range(0,len(sample_fragments)):
-        count = codon_count(sample_fragments[i])
-        freq = codon_aafreq(count)
-        rscu = get_RSCU(freq)
-        freq_frags[str(pos)+"-"+str(pos+frag_number-1)] = freq
-        rscu_frags[str(pos)+"-"+str(pos+frag_number-1)] = rscu
-        pos += frag_number
+    #freq_frags = {}
+    #rscu_frags = {}
+    #pos = 1
+    #for i in range(0,len(sample_fragments)):
+        #count = codon_count(sample_fragments[i])
+        #freq = codon_aafreq(count)
+        #rscu = get_RSCU(freq)
+        #freq_frags[str(pos)+"-"+str(pos+frag_number-1)] = freq
+        #rscu_frags[str(pos)+"-"+str(pos+frag_number-1)] = rscu
+        #pos += frag_number
 
     # ask to convert codons to numbers
-    #convert = input("Convert codons to numeric values? Enter Y/N: ")
-    #if convert.lower() == "y":
-        #rscu_genome = codon_to_num(rscu_genome)
-        #for i in range(0,len(rscu_genes)):
-            #rscu_genes[i] = codon_to_num(rscu_genes[i])
-        #for i in range(0,len(rscu_genes)):
-            #rscu_fragments[i] = codon_to_num(rscu_fragments[i])
+    convert = input("Convert codons to numeric values? Enter Y/N: ")
+    if convert.lower() == "y":
+        rscu_genome = codon_to_num(rscu_genome)
+        for key in rscu_genes.keys():
+            rscu_genes[key] = codon_to_num(rscu_genes[key])
+        for key in rscu_frags.keys():
+            rscu_frags[key] = codon_to_num(rscu_frags[key])
 
     # write genome frequency table
     # file_writer(freq_genome, file_name + "_freq_genome" )
@@ -351,7 +351,7 @@ def main():
     file_writer2(rscu_genes, file_name + "_rscu_genes")
 
     # write fragment rscu tables and save in fragment folder
-    file_writer2(rscu_frags, file_name + "_rscu_frags")
+    #file_writer2(rscu_frags, file_name + "_rscu_frags")
     
 
     # comparison with other strains
