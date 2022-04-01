@@ -1,6 +1,7 @@
 # =============================================================================
 # Group 2 COVID Analysis Project
 # BIOT 670, Spring 2022
+# University of Maryland Global Campus
 # =============================================================================
 
 # Please refer for calculations:
@@ -96,7 +97,7 @@ def genes(gb_record):
                 continue
             if (in_locs(locs, feature.location.start) == True and in_locs(locs, 
                 feature.location.end) == True):
-                    # Avoid duplicate sequences (i.e. ORF1a & ORF1ab)
+                    # Avoid duplicating sequences (i.e. ORF1a & ORF1ab)
                     continue
             names.append(name)
             locs.append(feature.location)
@@ -215,7 +216,7 @@ def get_RSCU(codon_freq):
 
 
 def codon_to_num(codon_dict):
-# Accept a dictionary with codons as keys and convert the codons to numbers
+# Accept a dictionary with codons as keys and convert codons to numbers
 
     # Define numerical values for codons
     codon_num = {
@@ -323,8 +324,8 @@ def main():
         rscu_genome = codon_to_num(rscu_genome)
         for key in rscu_genes.keys():
             rscu_genes[key] = codon_to_num(rscu_genes[key])
-        for key in rscu_frags.keys():
-            rscu_frags[key] = codon_to_num(rscu_frags[key])
+##        for key in rscu_frags.keys():
+##            rscu_frags[key] = codon_to_num(rscu_frags[key])
 
 
     # Write genome rscu table to csv file
